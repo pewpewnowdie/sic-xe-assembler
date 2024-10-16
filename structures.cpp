@@ -4,9 +4,18 @@
 #include<unordered_map>
 #include<stdexcept>
 
+#define GARBAGE 4294967295
+
+struct Node {
+    int val;
+    struct Node* next;
+    Node() : val(0), next(nullptr) {};
+    Node(int x) : val(x), next(nullptr) {};
+};
+
 struct SymData {
     uint32_t address;
-    bool flag;
+    Node* list;
 };
 
 class Optab {
@@ -28,6 +37,8 @@ public:
             {"TIO", 0xF8}, {"TIX", 0x2C}, {"TIXR", 0xB8}, {"WD", 0xDC}
         };
     }
+
+    // returns machine code, 0x01 if invalid
     uint8_t lookup(const std::string &instruction) {
         if(OPTAB.find(instruction) == OPTAB.end()) return 0x01;
         return OPTAB[instruction];
@@ -41,13 +52,58 @@ public:
         if(SYMTAB.find(symbol) == SYMTAB.end()) return false;
         return true;
     }
+
     SymData lookup(const std::string &symbol) {
         if(!present(symbol)) throw std::invalid_argument("Symtab.lookup : Symbol is not present in SYMTAB");
         return SYMTAB[symbol];
     }
-    void write(Optab *optab, const std::string &symbol, const uint32_t address, bool flag = false) {
-        if(present(symbol)) throw std::invalid_argument("Symtab.write : Symbol is already present in SYMTAB");
-        SYMTAB[symbol] = {address, flag};
+
+    // returns true if symbol either is not present in the table or it has a garbage value (it has been forward referenced elsewhere)
+    bool checkForwardReference(const std::string &symbol) {
+        if(!present(symbol)) return true;
+        return lookup(symbol).address == GARBAGE;
+    }
+
+    // use when symbol is being declared
+    // returns true if forward referencing was encountered
+    bool writeSymbol(const std::string &symbol, const uint32_t address, bool flag = false) {
+        if(present(symbol)) {
+            if(lookup(symbol).address != GARBAGE) throw std::invalid_argument("Symtab.writeSymbol : Redefinition of symbol is not allowed");
+            // implement forward reference resolution
+            return true;
+        }
+        SYMTAB[symbol] = {address, NULL};
+        return false;
+    }
+
+    // use when symbol is an argument and not a declaration (will be called using getAddress())
+    // call this function only if referenced symbol has a GARBAGE address (use checkForwardReference()  before using this function)
+    // returns true if symbol was already referenced, else false
+    bool writeReference(const std::string &symbol, const uint32_t address) {
+        if(present(symbol)) {
+            if(lookup(symbol).address != GARBAGE) {
+                throw std::invalid_argument("Symtab.writeReference : Symbol already declared, symbol is not forward referenced");
+            }
+            Node* head = SYMTAB[symbol].list;
+            if(!head) {
+                head = new Node(address);
+                return true;
+            }
+            while(head && head->next) head = head->next;
+            head->next = new Node(address);
+            return false;
+        }
+        SYMTAB[symbol] = {GARBAGE, new Node(address)};
+        return true;
+    }
+
+    // use when symbol is an argument and not a declaration
+    uint32_t getAddress(const std::string &symbol, const uint32_t callerAddress) {
+        if(checkForwardReference(symbol)) {
+            writeReference(symbol, callerAddress);
+            return GARBAGE;
+        }
+        return lookup(symbol).address;
     }
 };
 
