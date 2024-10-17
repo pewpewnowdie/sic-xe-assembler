@@ -7,10 +7,10 @@
 #define GARBAGE 4294967295
 
 struct Node {
-    int val;
-    struct Node* next;
-    Node() : val(0), next(nullptr) {};
-    Node(int x) : val(x), next(nullptr) {};
+    uint32_t address;
+    Node* next;
+    Node() : address(GARBAGE), next(nullptr) {};
+    Node(uint32_t x) : address(x), next(nullptr) {};
 };
 
 struct SymData {
@@ -65,15 +65,15 @@ public:
     }
 
     // use when symbol is being declared
-    // returns true if forward referencing was encountered
-    bool writeSymbol(const std::string &symbol, const uint32_t address, bool flag = false) {
+    // returns true if successful (no forward referencing was encountered)
+    bool writeSymbol(const std::string &symbol, const uint32_t address) {
         if(present(symbol)) {
             if(lookup(symbol).address != GARBAGE) throw std::invalid_argument("Symtab.writeSymbol : Redefinition of symbol is not allowed");
             // implement forward reference resolution
-            return true;
+            return false;
         }
         SYMTAB[symbol] = {address, NULL};
-        return false;
+        return true;
     }
 
     // use when symbol is an argument and not a declaration (will be called using getAddress())
@@ -85,7 +85,7 @@ public:
                 throw std::invalid_argument("Symtab.writeReference : Symbol already declared, symbol is not forward referenced");
             }
             Node* head = SYMTAB[symbol].list;
-            if(!head) {
+            if(!head) {             // this condition should never be true
                 head = new Node(address);
                 return true;
             }
@@ -108,3 +108,5 @@ public:
 };
 
 uint32_t LOCCTR;
+Optab optab = Optab();
+Symtab symtab = Symtab();
