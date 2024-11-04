@@ -59,7 +59,7 @@ public:
         return value <= (1 << 15);
     }
 
-    Instruction splitInstruction(std::string instruction) {
+    Instruction inputSplit(std::string instruction) {
         Instruction result;
         instruction = trim(instruction);
         std::istringstream iss(instruction);
@@ -74,6 +74,8 @@ public:
         if(result.operation[0] == '+' || result.operation[0] == '@') {
             result.prefix = result.operation[0];
             result.operation = result.operation.substr(1);
+        } else {
+            result.prefix = ' ';
         }
         std::string operand;
         while (getline(iss, operand, ',')) {
