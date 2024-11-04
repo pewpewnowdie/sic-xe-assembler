@@ -1,0 +1,8 @@
+        START   1000         ; Set the starting address
+        LDA     NUM1         ; Load the first number into the accumulator
+        ADD     NUM2         ; Add the second number to the accumulator
+        STA     RESULT       ; Store the result in the RESULT memory location
+NUM1:   WORD    5            ; Define NUM1 as 5
+NUM2:   WORD    10           ; Define NUM2 as 10
+RESULT: WORD    0            ; Define RESULT to store the output
+        END     START        ; Indicate the end of the program
