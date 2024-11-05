@@ -66,4 +66,11 @@ public:
         if(!present(symbol)) throw std::invalid_argument("Symtab.getAddress : No such symbol present in SYMTAB");
         return lookup(symbol).address;
     }
+
+    void print() {
+        std::cout << "SYMTAB:" << std::endl;
+        for(auto &i : SYMTAB) {
+            std::cout << i.first << " " << i.second.address << std::endl;
+        }
+    }
 };
