@@ -111,7 +111,7 @@ public:
         std::istringstream iss(instruction);
         std::string firstPart;
         getline(iss, firstPart, ' ');
-        result.address = std::stoi(firstPart);
+        result.address = (uint32_t)std::stoi(firstPart);
         std::string secondPart;
         getline(iss, secondPart, ' ');
         if (secondPart.back() == ':') {
@@ -130,7 +130,6 @@ public:
         while (getline(iss, operand, ',')) {
             result.operands.push_back(trim(operand));
         }
-        result.address = 0;
         return result;
     }
 

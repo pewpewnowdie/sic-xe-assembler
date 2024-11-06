@@ -62,8 +62,8 @@ public:
     }
 
     // use when symbol is an argument and not a declaration
-    uint32_t getAddress(const std::string &symbol, const uint32_t callerAddress) {
-        if(!present(symbol)) throw std::invalid_argument("Symtab.getAddress : No such symbol present in SYMTAB");
+    uint32_t getAddress(const std::string &symbol) {
+        if(!present(symbol)) throw std::invalid_argument("Symtab.getAddress : " + symbol +" is not present in SYMTAB");
         return lookup(symbol).address;
     }
 

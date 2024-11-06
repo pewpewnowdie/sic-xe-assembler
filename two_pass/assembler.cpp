@@ -20,6 +20,7 @@ protected:
     std::string progName;
 public:
     PassOne() {
+        std::cout << "PassOne called" << std::endl;
         intermediateFile.open("intermediate.txt");
         if(!intermediateFile.is_open()) {
             std::cerr << "Error opening intermediate file!" << std::endl;
@@ -50,7 +51,7 @@ public:
                 try {
                     symtab.writeSymbol(instruction.label, locctr);
                 } catch(const std::invalid_argument &e) {
-                    std::cerr << e.what() << std::endl;
+                    std::cerr << "PassOne.initiatePassOne : " << e.what() << std::endl;
                     file.close();
                     return 1;
                 }
@@ -84,7 +85,7 @@ public:
                 try {
                     symtab.writeSymbol(instruction.label, locctr);
                 } catch(const std::invalid_argument &e) {
-                    std::cerr << e.what() << std::endl;
+                    std::cerr << "PassOne.initatePassOne : " << e.what() << std::endl;
                     file.close();
                     return 1;
                 }
@@ -134,6 +135,7 @@ public:
             }
         }
         file.close();
+        intermediateFile.close();
         return 0;
     }
 
@@ -146,6 +148,7 @@ class PassTwo : public PassOne {
     std::ofstream objectFile;
 public:
     PassTwo() {
+        std::cout << "PassTwo called" << std::endl;
         objectFile.open("object.txt");
         if(!objectFile.is_open()) {
             std::cerr << "Error opening object file!" << std::endl;
@@ -153,9 +156,11 @@ public:
         }
     }
     ~PassTwo() {
+        std::cout << "Assembling completed" << std::endl;
         if(objectFile.is_open()) objectFile.close();
     }
     int initiatePassTwo() {
+        printSymtab();
         std::ifstream file("intermediate.txt");
         if(!file.is_open()) {
             std::cerr << "Error opening intermediate file!" << std::endl;
@@ -163,86 +168,174 @@ public:
         }
         std::string line;
         Reader::Instruction instruction;
-        std::getline(file, line);
-        if(line[0] >= '0' && line[0] <= '9') {
-            objectFile << "H^PROG^0000^" << reader.decToHex(length) <<"\n";
+        getline(file, line);
+        instruction = reader.inputSplit(line);
+        if(instruction.label != "") {
+            objectFile << "H^" << instruction.label << "^" << reader.decToHex(start) << "^" << reader.decToHex(length) <<"\n";
         } else {
-            instruction = reader.inputSplit(line);
-            if(instruction.label != "") {
-                objectFile << "H^START^" << instruction.label << "^" << reader.decToHex(start) << "^" << reader.decToHex(length) <<"\n";
-            } else {
-                objectFile << "H^START^" << reader.decToHex(start) << "^" << reader.decToHex(length) <<"\n";
-            }
-            std::getline(file, line);
+            objectFile << "H^" << reader.decToHex(start) << "^" << reader.decToHex(length) <<"\n";
         }
+        getline(file, line);
         Reader::Instruction nextInstruction = reader.intermediateSplit(line);
-        if(nextInstruction.operation == "END") {
-            objectFile << "E^" << reader.decToHex(start) << '\n';
-            return 0;
-        }
-        locctr = nextInstruction.address;
-        std::stringstream record;
+        // if(nextInstruction.operation == "END") {
+        //     std::cerr << "PassTwo.initiatePassTwo : No instructions to assemble" << std::endl;
+        //     objectFile << "E^" << reader.decToHex(start) << '\n';
+        //     return 0;
+        // }
+        std::string record = "^";
+        locctr = start;
         uint32_t recordAddress = locctr;
-        do {
+        int recordSize = 0;
+
+        while(getline(file, line)) {
             instruction = nextInstruction;
-            if(!getline(file, line)) return 1;
             nextInstruction = reader.intermediateSplit(line);
             locctr = nextInstruction.address;
-            if(nextInstruction.operation == "END") {
-                return 0;
-            }
             auto opcodeLookup = optab.lookup(instruction.operation);
             uint8_t opcode = opcodeLookup.first;
 
             if(opcode == 0x01) {    // assembler directive
                 // write code for assembler directives
+                std::cerr << "PassTwo.initiatePassTwo : Assembler directives not supported" << std::endl;
                 continue;
             }
 
             // setting flags
             uint8_t flag = 0;
 
+            std::cout << "Instruction: " << locctr << " " << instruction.operation << " " << std::hex << unsigned(opcode) << std::endl;
+
             if(locctr - instruction.address == 1) {     // format 1
                 if(instruction.operands.size()) {
                     std::cerr << "PassTwo.initiatePassTwo : Incorrect arguments for format 2 instruction" << std::endl;
                     exit(1);
                 }
-                if(record.str().size() / 2 > 14) {
-                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(record.str().size() / 2) << "^" << record.str() << "\n";
-                    record.str("");
+                if(recordSize > 14) {
+                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+                    record = "^";
                     recordAddress = locctr;
+                    recordSize = 0;
                 }
                 if(opcode / 16 == 0) {
-                    record << "0" << reader.decToHex(opcode);
+                    record += "^0" + reader.decToHex(opcode);
                 } else {
-                    record << reader.decToHex(opcode);
+                    record += "^" + reader.decToHex(opcode);
                 }
+                recordSize += 1;
                 locctr = nextInstruction.address;
             } else if(locctr - instruction.address == 2) {  // format 2
-                if(record.str().size() / 2 > 13) {
-                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(record.str().size() / 2) << "^" << record.str() << "\n";
-                    record.str("");
+                if(recordSize > 13) {
+                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+                    record = "^";
                     recordAddress = locctr;
+                    recordSize = 0;
                 }
                 char reg1 = reader.getRegisterNumber(instruction.operands[0]);
                 char reg2 = reader.getRegisterNumber(instruction.operands[1]);
                 if(opcode / 16 == 0) {
-                    record << "0" << reader.decToHex(opcode) << reg1 << reg2;
+                    record += "^0" + reader.decToHex(opcode) + reg1 + reg2;
                 } else {
-                    record << reader.decToHex(opcode) << reg1 << reg2;
+                    record += "^" + reader.decToHex(opcode) + reg1 + reg2;
                 }
+                recordSize += 2;
                 locctr = nextInstruction.address;
             } else if(locctr - instruction.address == 3) {  // format 3
-                if(record.str().size() / 2 > 12) {
-                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(record.str().size() / 2) << "^" << record.str() << "\n";
-                    record.str("");
+                if(recordSize > 12) {
+                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+                    record = "^";
                     recordAddress = locctr;
+                    recordSize = 0;
                 }
                 // setting flags
-                
+                if(((instruction.operands.size() > 0) && (instruction.operands[0] == "X" || instruction.operands[0] == "x")) ||
+                   ((instruction.operands.size() > 1) && (instruction.operands[1] == "X" || instruction.operands[1] == "x")))
+                    flag |= (1 << 4);
+                if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '#')
+                    flag |= (1 << 5);
+                else if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '@')
+                    flag |= (1 << 6);
+                else
+                    flag |= (1 << 2);
+                uint32_t objectCode = (opcode << 4) | flag;
+                objectCode <<= 12;
+                if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '#') {
+                    uint16_t disp = reader.wordToNum(instruction.operands[0].substr(1));
+                    objectCode |= disp;
+                } else if(instruction.operands.size() > 0 && !instruction.operands[0].empty()) {
+                    try {
+                        uint16_t disp = symtab.getAddress(instruction.operands[0]) - locctr;
+                        std::cout << locctr << " " << symtab.getAddress(instruction.operands[0]) << " " << disp << std::endl;
+                        objectCode |= disp;
+                    } catch(const std::out_of_range &e) {
+                        std::cerr << "PassTwo.initiatePassTwo : incorrect format" << std::endl;
+                        exit(1);
+                    } catch(const std::invalid_argument &e) {
+                        std::cerr << "PassTwo.initiatePassTwo : " << e.what() << std::endl;
+                        exit(1);
+                    }
+                } else {
+                    std::cerr << "PassTwo.initiatePassTwo : missing operand" << std::endl;
+                    exit(1);
+                }
+                std::string currCode = reader.decToHex(objectCode);
+                if(currCode.size() < 6) {
+                    currCode = std::string(6 - currCode.size(), '0') + currCode;
+                }
+                record += "^" + currCode;
+                recordSize += 3;
+                locctr = nextInstruction.address;
+            } else if(locctr - instruction.address == 4) {  // format 4
+                if(recordSize > 11) {
+                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+                    record = "^";
+                    recordAddress = locctr;
+                    recordSize = 0;
+                }
+                // setting flags
+                flag = 1; // e = 1
+                if(instruction.operands[0] == "X" || instruction.operands[0] == "x" || instruction.operands[1] == "X" || instruction.operands[1] == "x") flag |= (1 << 4);
+                if(instruction.operands[0][0] == '#') flag |= (1 << 5);
+                else if(instruction.operands[0][0] == '@') flag |= (1 << 6);
+                else flag |= (1 << 2);
+
+                uint32_t objectCode = (opcode << 4) | flag;
+                objectCode <<= 20;
+
+                if(instruction.operands[0][0] == '#') {
+                    uint32_t disp = reader.wordToNum(instruction.operands[0].substr(1));
+                    objectCode |= disp;
+                } else if(instruction.operands[0][0] == '@') {
+                    try {
+                        try {
+                            uint32_t disp = locctr - symtab.getAddress(instruction.operands[0].substr(1));
+                            objectCode |= disp;
+                        } catch(const std::out_of_range &e) {
+                            std::cerr << "PassTwo.initiatePassTwo : incorrect format" << std::endl;
+                            exit(1);
+                        }
+                    } catch(const std::invalid_argument &e) {
+                        std::cerr << "PassTwo.initiatePassTwo : " << e.what() << std::endl;
+                        exit(1);
+                    }
+                } else {
+                    uint32_t disp = symtab.getAddress(instruction.operands[0]) - locctr;
+                    objectCode |= disp;
+                }
+                record += "^" +  reader.decToHex(objectCode);
+                locctr = nextInstruction.address;
+                recordSize += 4;
             }
-            // if(instruction.operands[0] == "X" || instruction.operands[0] == "x" || instruction.operands[1] == "X" || instruction.operands[1] == "x") flag | (1 << 3);
-        } while(true);
+            if(nextInstruction.operation == "END") {
+                std::cout << "End of file" << std::endl;
+                break;
+            }
+        }
+        if(record.size()) {
+            objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+        }
+        objectFile << "E^" << reader.decToHex(start) << '\n';
+        if(file.is_open()) file.close();
+        if(objectFile.is_open()) objectFile.close();
         return 0;
     }
 };
@@ -259,5 +352,8 @@ int main(int argc, char *argv[]) {
     std::string path = argv[1];
     Assembler assembler;
     assembler.initiate(path);
+    // PassOne passOne;
+    // passOne.initiatePassOne(path);
+    // passOne.printSymtab();
     return 0;
 }
