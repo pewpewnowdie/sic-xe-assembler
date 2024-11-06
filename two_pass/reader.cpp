@@ -66,17 +66,17 @@ public:
         return value <= (1 << 15);
     }
 
-    char getRegisterNumber(const std::string& reg) {
-        if(reg == "A") return '0';
-        if(reg == "X") return '1';
-        if(reg == "L") return '2';
-        if(reg == "B") return '3';
-        if(reg == "S") return '4';
-        if(reg == "T") return '5';
-        if(reg == "F") return '6';
-        if(reg == "PC") return '8';
-        if(reg == "SW") return '9';
-        return '0';
+    std::string getRegisterNumber(const std::string& reg) {
+        if(reg == "A") return "0";
+        if(reg == "X") return "1";
+        if(reg == "L") return "2";
+        if(reg == "B") return "3";
+        if(reg == "S") return "4";
+        if(reg == "T") return "5";
+        if(reg == "F") return "6";
+        if(reg == "PC") return "8";
+        if(reg == "SW") return "9";
+        return "0";
     }
 
     Instruction inputSplit(std::string instruction) {
@@ -111,7 +111,7 @@ public:
         std::istringstream iss(instruction);
         std::string firstPart;
         getline(iss, firstPart, ' ');
-        result.address = (uint32_t)std::stoi(firstPart);
+        result.address = wordToNum(firstPart);
         std::string secondPart;
         getline(iss, secondPart, ' ');
         if (secondPart.back() == ':') {
@@ -132,41 +132,4 @@ public:
         }
         return result;
     }
-
-    // std::ifstream loadFile(const std::string &path) {
-    //     std::ifstream file(path);
-    //     if (!file.is_open()) {
-    //         throw std::invalid_argument("Reader.loadFile : File not found");
-    //     }
-    //     return file;
-    // }   
-
-    // std::vector<Instruction> readFile(std::ifstream &file) {
-    //     std::vector<Instruction> instructions;
-    //     std::string line;
-    //     while (std::getline(file, line)) {
-    //         if (!line.empty()) {
-    //             instructions.push_back(splitInstruction(line));
-    //         }
-    //     }
-    //     return instructions;
-    // }
-
-    // std::vector<Instruction> readFile(const std::string &path) {
-    //     std::ifstream file(path);
-    //     if (!file) {
-    //         std::cerr << "Error opening file: " << path << std::endl;
-    //         exit(1);
-    //     }
-
-    //     std::vector<Instruction> instructions;
-    //     std::string line;
-    //     while (std::getline(file, line)) {
-    //         if (!line.empty()) {
-    //             instructions.push_back(splitInstruction(line));
-    //         }
-    //     }
-    //     file.close();
-    //     return instructions;
-    // }
 };

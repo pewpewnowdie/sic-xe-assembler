@@ -70,7 +70,7 @@ public:
     void print() {
         std::cout << "SYMTAB:" << std::endl;
         for(auto &i : SYMTAB) {
-            std::cout << i.first << " " << i.second.address << std::endl;
+            std::cout << i.first << " " << std::hex << i.second.address << std::endl;
         }
     }
 };

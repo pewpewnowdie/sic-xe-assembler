@@ -20,7 +20,6 @@ protected:
     std::string progName;
 public:
     PassOne() {
-        std::cout << "PassOne called" << std::endl;
         intermediateFile.open("intermediate.txt");
         if(!intermediateFile.is_open()) {
             std::cerr << "Error opening intermediate file!" << std::endl;
@@ -55,8 +54,8 @@ public:
                     file.close();
                     return 1;
                 }
-                intermediateFile << instruction.label << ": "<< "START" << " " << locctr << "\n";
-            } else intermediateFile << "START" << " " << locctr << "\n";
+                intermediateFile << instruction.label << ": "<< "START" << " " << reader.decToHex(locctr) << "\n";
+            } else intermediateFile << "START" << " " << reader.decToHex(locctr) << "\n";
         }
         while (std::getline(file, line) && !line.empty()) {
             Reader::Instruction instruction = reader.inputSplit(line);
@@ -75,9 +74,9 @@ public:
                     }
                 }
                 if(instruction.label != "")
-                    intermediateFile << locctr << " " << instruction.label << ": " << "END" << " " << progName << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << instruction.label << ": " << "END" << " " << progName << "\n";
                 else
-                    intermediateFile << locctr << " " << "END" << " " << progName << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << "END" << " " << progName << "\n";
                 length = locctr - start;
                 break;
             }
@@ -96,33 +95,33 @@ public:
             size = instruction.prefix == '+' ? 4 : size;
             if(opcode != 0x01) {
                 if(instruction.label != "")
-                    intermediateFile << locctr << " " << instruction.label << ": " << instruction.operation << " " << instruction.operands[0] << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << instruction.label << ": " << instruction.operation << " " << instruction.operands[0] << "\n";
                 else
-                    intermediateFile << locctr << " " << instruction.operation << " " << instruction.operands[0] << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << instruction.operation << " " << instruction.operands[0] << "\n";
                 locctr += size;
             } else if(instruction.operation == "WORD") {
                 if(instruction.label != "")
-                    intermediateFile << locctr << " " << instruction.label << ": " << instruction.operation << " " << instruction.operands[0] << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << instruction.label << ": " << instruction.operation << " " << instruction.operands[0] << "\n";
                 else
-                    intermediateFile << locctr << " " << instruction.operation << " " << instruction.operands[0] << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << instruction.operation << " " << instruction.operands[0] << "\n";
                 locctr += 3;
             } else if(instruction.operation == "RESW") {
                 if(instruction.label != "")
-                    intermediateFile << locctr << " " << instruction.label << ": " << instruction.operation << " " << instruction.operands[0] << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << instruction.label << ": " << instruction.operation << " " << instruction.operands[0] << "\n";
                 else
-                    intermediateFile << locctr << " " << instruction.operation << " " << instruction.operands[0] << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << instruction.operation << " " << instruction.operands[0] << "\n";
                 locctr += 3 * reader.wordToNum(instruction.operands[0]);
             } else if(instruction.operation == "RESB") {
                 if(instruction.label != "")
-                    intermediateFile << locctr << " " << instruction.label << ": " << instruction.operation << " " << instruction.operands[0] << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << instruction.label << ": " << instruction.operation << " " << instruction.operands[0] << "\n";
                 else
-                    intermediateFile << locctr << " " << instruction.operation << " " << instruction.operands[0] << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << instruction.operation << " " << instruction.operands[0] << "\n";
                 locctr += reader.wordToNum(instruction.operands[0]);
             } else if(instruction.operation == "BYTE") {
                 if(instruction.label != "")
-                    intermediateFile << locctr << " " << instruction.label << ": " << instruction.operation << " " << instruction.operands[0] << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << instruction.label << ": " << instruction.operation << " " << instruction.operands[0] << "\n";
                 else
-                    intermediateFile << locctr << " " << instruction.operation << " " << instruction.operands[0] << "\n";
+                    intermediateFile << reader.decToHex(locctr) << " " << instruction.operation << " " << instruction.operands[0] << "\n";
                 if(instruction.operands[0][0] == 'X' || instruction.operands[0][0] == 'x') {
                     locctr += (instruction.operands[0].size() - 3) / 2;
                 } else if(instruction.operands[0][0] == 'C' || instruction.operands[0][0] == 'c') {
@@ -148,7 +147,6 @@ class PassTwo : public PassOne {
     std::ofstream objectFile;
 public:
     PassTwo() {
-        std::cout << "PassTwo called" << std::endl;
         objectFile.open("object.txt");
         if(!objectFile.is_open()) {
             std::cerr << "Error opening object file!" << std::endl;
@@ -166,26 +164,26 @@ public:
             std::cerr << "Error opening intermediate file!" << std::endl;
             exit(0);
         }
+
         std::string line;
         Reader::Instruction instruction;
         getline(file, line);
         instruction = reader.inputSplit(line);
+
         std::string progStart = reader.decToHex(start);
         std::string progLength = reader.decToHex(length);
         if(progStart.size() < 6) progStart = std::string(6 - progStart.size(), '0') + progStart;
         if(progLength.size() < 6) progLength = std::string(6 - progLength.size(), '0') + progLength;
+
         if(instruction.label != "") {
             objectFile << "H^" << instruction.label << "^" << progStart << "^" << progLength << "\n";
         } else {
             objectFile << "H^" << progStart << "^" << progLength <<"\n";
         }
+
         getline(file, line);
         Reader::Instruction nextInstruction = reader.intermediateSplit(line);
-        // if(nextInstruction.operation == "END") {
-        //     std::cerr << "PassTwo.initiatePassTwo : No instructions to assemble" << std::endl;
-        //     objectFile << "E^" << reader.decToHex(start) << '\n';
-        //     return 0;
-        // }
+
         std::string record = "";
         locctr = start;
         uint32_t recordAddress = locctr;
@@ -202,16 +200,14 @@ public:
                 if(recordSize) {
                     objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
                     record = "";
-                    recordAddress = locctr;
                     recordSize = 0;
                 }
+                recordAddress = locctr;
                 continue;
             }
 
             // setting flags
             uint8_t flag = 0;
-
-            std::cout << "Instruction: " << locctr << " " << instruction.operation << " " << std::hex << unsigned(opcode) << std::endl;
 
             if(locctr - instruction.address == 1) {     // format 1
                 if(instruction.operands.size()) {
@@ -238,8 +234,8 @@ public:
                     recordAddress = locctr;
                     recordSize = 0;
                 }
-                char reg1 = reader.getRegisterNumber(instruction.operands[0]);
-                char reg2 = reader.getRegisterNumber(instruction.operands[1]);
+                std::string reg1 = reader.getRegisterNumber(instruction.operands[0]);
+                std::string reg2 = reader.getRegisterNumber(instruction.operands[1]);
                 if(opcode / 16 == 0) {
                     record += "^0" + reader.decToHex(opcode) + reg1 + reg2;
                 } else {
@@ -343,10 +339,7 @@ public:
                 locctr = nextInstruction.address;
                 recordSize += 4;
             }
-            if(nextInstruction.operation == "END") {
-                std::cout << "End of file" << std::endl;
-                break;
-            }
+            if(nextInstruction.operation == "END") break;
         }
         if(record.size()) {
             objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
