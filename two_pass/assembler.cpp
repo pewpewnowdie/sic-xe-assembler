@@ -268,10 +268,12 @@ public:
                 objectCode <<= 12;
                 if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '#') {
                     uint16_t disp = reader.wordToNum(instruction.operands[0].substr(1));
+                    disp &= (1 << 13) - 1;
                     objectCode |= disp;
                 } else if(instruction.operands.size() > 0 && !instruction.operands[0].empty()) {
                     try {
                         uint16_t disp = symtab.getAddress(instruction.operands[0]) - locctr;
+                        disp &= (1 << 13) - 1;
                         objectCode |= disp;
                     } catch(const std::out_of_range &e) {
                         std::cerr << "PassTwo.initiatePassTwo : incorrect format" << std::endl;
@@ -316,6 +318,7 @@ public:
             
                 if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '#') {
                     uint32_t disp = reader.wordToNum(instruction.operands[0].substr(1));
+                    disp &= (1 << 21) - 1;
                     objectCode |= disp;
                 } else if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '@') {
                     try {
@@ -330,6 +333,7 @@ public:
                     }
                 } else if(instruction.operands.size() > 0) {
                     uint32_t disp = symtab.getAddress(instruction.operands[0]) - locctr;
+                    disp &= (1 << 21) - 1;
                     objectCode |= disp;
                 } else {
                     std::cerr << "PassTwo.initiatePassTwo : missing operand" << std::endl;
