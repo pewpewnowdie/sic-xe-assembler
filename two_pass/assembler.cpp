@@ -170,10 +170,14 @@ public:
         Reader::Instruction instruction;
         getline(file, line);
         instruction = reader.inputSplit(line);
+        std::string progStart = reader.decToHex(start);
+        std::string progLength = reader.decToHex(length);
+        if(progStart.size() < 6) progStart = std::string(6 - progStart.size(), '0') + progStart;
+        if(progLength.size() < 6) progLength = std::string(6 - progLength.size(), '0') + progLength;
         if(instruction.label != "") {
-            objectFile << "H^" << instruction.label << "^" << reader.decToHex(start) << "^" << reader.decToHex(length) <<"\n";
+            objectFile << "H^" << instruction.label << "^" << progStart << "^" << progLength << "\n";
         } else {
-            objectFile << "H^" << reader.decToHex(start) << "^" << reader.decToHex(length) <<"\n";
+            objectFile << "H^" << progStart << "^" << progLength <<"\n";
         }
         getline(file, line);
         Reader::Instruction nextInstruction = reader.intermediateSplit(line);
@@ -182,7 +186,7 @@ public:
         //     objectFile << "E^" << reader.decToHex(start) << '\n';
         //     return 0;
         // }
-        std::string record = "^";
+        std::string record = "";
         locctr = start;
         uint32_t recordAddress = locctr;
         int recordSize = 0;
@@ -212,7 +216,7 @@ public:
                 }
                 if(recordSize > 14) {
                     objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
-                    record = "^";
+                    record = "";
                     recordAddress = locctr;
                     recordSize = 0;
                 }
@@ -226,7 +230,7 @@ public:
             } else if(locctr - instruction.address == 2) {  // format 2
                 if(recordSize > 13) {
                     objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
-                    record = "^";
+                    record = "";
                     recordAddress = locctr;
                     recordSize = 0;
                 }
@@ -242,7 +246,7 @@ public:
             } else if(locctr - instruction.address == 3) {  // format 3
                 if(recordSize > 12) {
                     objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
-                    record = "^";
+                    record = "";
                     recordAddress = locctr;
                     recordSize = 0;
                 }
@@ -264,7 +268,6 @@ public:
                 } else if(instruction.operands.size() > 0 && !instruction.operands[0].empty()) {
                     try {
                         uint16_t disp = symtab.getAddress(instruction.operands[0]) - locctr;
-                        std::cout << locctr << " " << symtab.getAddress(instruction.operands[0]) << " " << disp << std::endl;
                         objectCode |= disp;
                     } catch(const std::out_of_range &e) {
                         std::cerr << "PassTwo.initiatePassTwo : incorrect format" << std::endl;
@@ -287,39 +290,46 @@ public:
             } else if(locctr - instruction.address == 4) {  // format 4
                 if(recordSize > 11) {
                     objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
-                    record = "^";
+                    record = "";
                     recordAddress = locctr;
                     recordSize = 0;
                 }
                 // setting flags
                 flag = 1; // e = 1
-                if(instruction.operands[0] == "X" || instruction.operands[0] == "x" || instruction.operands[1] == "X" || instruction.operands[1] == "x") flag |= (1 << 4);
-                if(instruction.operands[0][0] == '#') flag |= (1 << 5);
-                else if(instruction.operands[0][0] == '@') flag |= (1 << 6);
-                else flag |= (1 << 2);
-
+                if((instruction.operands.size() > 0 && (instruction.operands[0] == "X" || instruction.operands[0] == "x")) ||
+                   (instruction.operands.size() > 1 && (instruction.operands[1] == "X" || instruction.operands[1] == "x")))
+                    flag |= (1 << 4);
+            
+                if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '#')
+                    flag |= (1 << 5);
+                else if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '@')
+                    flag |= (1 << 6);
+                else
+                    flag |= (1 << 2);
+            
                 uint32_t objectCode = (opcode << 4) | flag;
                 objectCode <<= 20;
-
-                if(instruction.operands[0][0] == '#') {
+            
+                if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '#') {
                     uint32_t disp = reader.wordToNum(instruction.operands[0].substr(1));
                     objectCode |= disp;
-                } else if(instruction.operands[0][0] == '@') {
+                } else if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '@') {
                     try {
-                        try {
-                            uint32_t disp = locctr - symtab.getAddress(instruction.operands[0].substr(1));
-                            objectCode |= disp;
-                        } catch(const std::out_of_range &e) {
-                            std::cerr << "PassTwo.initiatePassTwo : incorrect format" << std::endl;
-                            exit(1);
-                        }
+                        uint32_t disp = symtab.getAddress(instruction.operands[0].substr(1)) - locctr;
+                        objectCode |= disp;
+                    } catch(const std::out_of_range &e) {
+                        std::cerr << "PassTwo.initiatePassTwo : incorrect format" << std::endl;
+                        exit(1);
                     } catch(const std::invalid_argument &e) {
                         std::cerr << "PassTwo.initiatePassTwo : " << e.what() << std::endl;
                         exit(1);
                     }
-                } else {
+                } else if(instruction.operands.size() > 0) {
                     uint32_t disp = symtab.getAddress(instruction.operands[0]) - locctr;
                     objectCode |= disp;
+                } else {
+                    std::cerr << "PassTwo.initiatePassTwo : missing operand" << std::endl;
+                    exit(1);
                 }
                 record += "^" +  reader.decToHex(objectCode);
                 locctr = nextInstruction.address;
