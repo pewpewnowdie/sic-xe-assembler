@@ -199,8 +199,12 @@ public:
             uint8_t opcode = opcodeLookup.first;
 
             if(opcode == 0x01) {    // assembler directive
-                // write code for assembler directives
-                std::cerr << "PassTwo.initiatePassTwo : Assembler directives not supported" << std::endl;
+                if(recordSize) {
+                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+                    record = "";
+                    recordAddress = locctr;
+                    recordSize = 0;
+                }
                 continue;
             }
 
