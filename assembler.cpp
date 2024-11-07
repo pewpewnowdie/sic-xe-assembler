@@ -4,6 +4,7 @@
 #include<unordered_map>
 #include<stdexcept>
 #include<algorithm>
+#include<math.h>
 
 #include "structures.cpp"
 #include "reader.cpp"
@@ -123,7 +124,7 @@ public:
                 else
                     intermediateFile << reader.decToHex(locctr) << " " << instruction.operation << " " << instruction.operands[0] << "\n";
                 if(instruction.operands[0][0] == 'X' || instruction.operands[0][0] == 'x') {
-                    locctr += (instruction.operands[0].size() - 3) / 2;
+                    locctr += ceil((instruction.operands[0].size() - 3) / 2.0);
                 } else if(instruction.operands[0][0] == 'C' || instruction.operands[0][0] == 'c') {
                     locctr += instruction.operands[0].size() - 3;
                 }
@@ -198,7 +199,9 @@ public:
 
             if(opcode == 0x01) {    // assembler directive
                 if(recordSize) {
-                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+                    std::string temp = reader.decToHex(recordSize);
+                    temp = temp.size() >= 2 ? temp : "0" + temp;
+                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << temp << record << "\n";
                     record = "";
                     recordSize = 0;
                 }
@@ -215,9 +218,10 @@ public:
                     exit(1);
                 }
                 if(recordSize > 14) {
-                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+                    std::string temp = reader.decToHex(recordSize);
+                    temp = temp.size() >= 2 ? temp : "0" + temp;
+                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << temp << record << "\n";
                     record = "";
-                    recordAddress = locctr;
                     recordSize = 0;
                 }
                 if(opcode / 16 == 0) {
@@ -229,9 +233,10 @@ public:
                 locctr = nextInstruction.address;
             } else if(locctr - instruction.address == 2) {  // format 2
                 if(recordSize > 13) {
-                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+                    std::string temp = reader.decToHex(recordSize);
+                    temp = temp.size() >= 2 ? temp : "0" + temp;
+                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << temp << record << "\n";
                     record = "";
-                    recordAddress = locctr;
                     recordSize = 0;
                 }
                 std::string reg1 = reader.getRegisterNumber(instruction.operands[0]);
@@ -245,21 +250,22 @@ public:
                 locctr = nextInstruction.address;
             } else if(locctr - instruction.address == 3) {  // format 3
                 if(recordSize > 12) {
-                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+                    std::string temp = reader.decToHex(recordSize);
+                    temp = temp.size() >= 2 ? temp : "0" + temp;
+                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << temp << record << "\n";
                     record = "";
-                    recordAddress = locctr;
                     recordSize = 0;
                 }
                 // setting flags
                 if(((instruction.operands.size() > 0) && (instruction.operands[0] == "X" || instruction.operands[0] == "x")) ||
                    ((instruction.operands.size() > 1) && (instruction.operands[1] == "X" || instruction.operands[1] == "x")))
-                    flag |= (1 << 4);
+                    flag |= (1 << 3);
                 if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '#')
-                    flag |= (1 << 5);
+                    flag |= (1 << 4);
                 else if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '@')
-                    flag |= (1 << 6);
+                    flag |= (1 << 5);
                 else
-                    flag |= (1 << 2);
+                    flag |= (1 << 1);
                 uint32_t objectCode = (opcode << 4) | flag;
                 objectCode <<= 12;
                 if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '#') {
@@ -291,23 +297,24 @@ public:
                 locctr = nextInstruction.address;
             } else if(locctr - instruction.address == 4) {  // format 4
                 if(recordSize > 11) {
-                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+                    std::string temp = reader.decToHex(recordSize);
+                    temp = temp.size() >= 2 ? temp : "0" + temp;
+                    objectFile << "T^" << reader.decToHex(recordAddress) << "^" << temp << record << "\n";
                     record = "";
-                    recordAddress = locctr;
                     recordSize = 0;
                 }
                 // setting flags
                 flag = 1; // e = 1
                 if((instruction.operands.size() > 0 && (instruction.operands[0] == "X" || instruction.operands[0] == "x")) ||
                    (instruction.operands.size() > 1 && (instruction.operands[1] == "X" || instruction.operands[1] == "x")))
-                    flag |= (1 << 4);
+                    flag |= (1 << 3);
             
                 if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '#')
-                    flag |= (1 << 5);
+                    flag |= (1 << 4);
                 else if(instruction.operands.size() > 0 && !instruction.operands[0].empty() && instruction.operands[0][0] == '@')
-                    flag |= (1 << 6);
+                    flag |= (1 << 5);
                 else
-                    flag |= (1 << 2);
+                    flag |= (1 << 1);
             
                 uint32_t objectCode = (opcode << 4) | flag;
                 objectCode <<= 20;
@@ -342,7 +349,9 @@ public:
             if(nextInstruction.operation == "END") break;
         }
         if(record.size()) {
-            objectFile << "T^" << reader.decToHex(recordAddress) << "^" << reader.decToHex(recordSize) << record << "\n";
+            std::string temp = reader.decToHex(recordSize);
+            temp = temp.size() >= 2 ? temp : "0" + temp;
+            objectFile << "T^" << reader.decToHex(recordAddress) << "^" << temp << record << "\n";
         }
         objectFile << "E^" << reader.decToHex(start) << '\n';
         if(file.is_open()) file.close();
