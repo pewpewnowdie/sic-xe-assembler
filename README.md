@@ -50,7 +50,7 @@ This project is a **SIC/XE assembler** implemented in C++. It translates assembl
 
   Run the assembler as follows:
   ```bash
-  ./assembler example.asm output.obj
+  ./assembler example.txt
   ```
 
   The output file `object.txt` will contain the assembled machine code, along with the intermediate file `intermediate.txt`.
