@@ -36,7 +36,7 @@ This project is a **SIC/XE assembler** implemented in C++. It translates assembl
 
 ## Example
 
-  Given an assembly file (`example.txt'):
+  Given an assembly file (`example.txt`):
   ```asm
   PROG:   START   1000         ; Set the starting address
           LDA     NUM1         ; Load the first number into the accumulator
@@ -61,7 +61,7 @@ This project is a **SIC/XE assembler** implemented in C++. It translates assembl
   T^1000^0A^002007^18300004^0C2004
   E^1000
   ```
-  `intermediate.txt`
+  `intermediate.txt`:
   ```txt
   PROG: START 1000
   1000 LDA NUM1
