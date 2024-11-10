@@ -1,14 +1,14 @@
 # SIC/XE Assembler
 
-This project is a **SIC/XE assembler** implemented in C++. It translates assembly language programs written for the **Simplified Instructional Computer (SIC) and its extended version (SIC/XE)** into machine code. The assembler processes SIC/XE assembly code, generating object code that can be executed by a SIC/XE simulator.
+This project is a **SIC/XE assembler** implemented in C++. It translates assembly language programs written for the **Simplified Instructional Computer extended version (SIC/XE)** into machine code. The assembler processes SIC/XE assembly code, generating object code that can be executed by a SIC/XE simulator.
 
 ## Features
 
 - **Supports SIC and SIC/XE instructions** – Provides full support for standard and extended instructions.
-- **Two-pass assembly process** – First pass builds the symbol table, while the second pass generates object code.
+- **Two-pass assembly process** – First pass builds the symbol table and the intermediate file, while the second pass generates object code.
 - **Handles directives** – Supports SIC/XE assembler directives such as `START`, `END`, `BYTE`, `WORD`, `RESB`, and `RESW`.
 - **Error reporting** – Identifies and reports syntax errors, undefined symbols, and other common assembly issues.
-- **Object code generation** – Produces a well-formatted object file suitable for SIC/XE loaders.
+- **Object code generation** – Produces a well-formatted object file.
 
 ## Installation
 
